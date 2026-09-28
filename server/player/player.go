@@ -1593,16 +1593,21 @@ func (p *Player) SetCooldown(item world.Item, cooldown time.Duration) {
 // UseItem uses the item currently held in the player's main hand in the air. Generally, nothing happens,
 // unless the held item implements the item.Usable interface, in which case it will be activated.
 // This generally happens for items such as throwable items like snowballs.
+// If the player's game mode does not allow interaction, such as spectator mode, only Handler.HandleItemUse
+// is called and the item itself is not used.
 func (p *Player) UseItem() {
-	if !p.GameMode().AllowsInteraction() {
-		return
-	}
 	i, _ := p.HeldItems()
 	ctx := NewEventContext(p.tx, p)
 	if p.HasCooldown(i.Item()) {
 		return
 	}
 	if p.Handler().HandleItemUse(ctx); ctx.Cancelled() {
+		return
+	}
+	if !p.GameMode().AllowsInteraction() {
+		// Players that cannot interact with the world, such as spectators,
+		// still trigger HandleItemUse, so that items may be used for things
+		// like menus, but the items themselves do nothing.
 		return
 	}
 	i, left := p.HeldItems()

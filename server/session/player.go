@@ -1323,18 +1323,11 @@ func gameTypeFromMode(mode world.GameMode) int32 {
 	if mode.AllowsFlying() && mode.CreativeInventory() {
 		return packet.GameTypeCreative
 	}
-	if spectatorMode(mode) {
-		return packet.GameTypeSpectator
-	}
+	// Spectator mode is deliberately sent as survival: A client in the
+	// spectator game type hides its hotbar and does not use items, which
+	// servers rely on for items such as menus. Flying and moving through blocks
+	// are granted through the abilities of the player instead.
 	return packet.GameTypeSurvival
-}
-
-// spectatorMode checks if the game mode passed behaves like spectator mode: The
-// player flies through blocks and cannot interact with the world or be seen.
-// The client hides the hotbar and held items of players in spectator mode and
-// forces them to fly.
-func spectatorMode(mode world.GameMode) bool {
-	return mode.AllowsFlying() && !mode.HasCollision() && !mode.AllowsInteraction() && !mode.AllowsEditing() && !mode.Visible()
 }
 
 // The following functions use the go:linkname directive in order to make sure the item.byID and item.toID

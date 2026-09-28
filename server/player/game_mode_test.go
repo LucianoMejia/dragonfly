@@ -71,10 +71,23 @@ func TestSetGameModeKeepsInvisibilityEffect(t *testing.T) {
 	})
 }
 
-func TestSpectatorCannotUseItems(t *testing.T) {
+// itemUseCounter is a Handler that counts calls to HandleItemUse.
+type itemUseCounter struct {
+	NopHandler
+	uses int
+}
+
+func (h *itemUseCounter) HandleItemUse(*Context) { h.uses++ }
+
+func TestSpectatorItemUse(t *testing.T) {
 	withPlayer(t, world.GameModeSpectator, func(p *Player) {
+		h := &itemUseCounter{}
+		p.Handle(h)
 		p.SetHeldItems(item.NewStack(item.Snowball{}, 16), item.Stack{})
 		p.UseItem()
+		if h.uses != 1 {
+			t.Errorf("expected HandleItemUse to be called once for a spectator, got %v calls", h.uses)
+		}
 		if held, _ := p.HeldItems(); held.Count() != 16 {
 			t.Errorf("player in spectator mode used a snowball: %v left", held.Count())
 		}
