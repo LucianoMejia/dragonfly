@@ -1251,7 +1251,7 @@ func (p *Player) StartFlying() {
 		return
 	}
 	p.flying = true
-	p.session().SendGameMode(p)
+	p.session().SendAbilities(p)
 }
 
 // Flying checks if the player is currently flying.
@@ -1265,7 +1265,7 @@ func (p *Player) StopFlying() {
 		return
 	}
 	p.flying = false
-	p.session().SendGameMode(p)
+	p.session().SendAbilities(p)
 }
 
 // Jump makes the player jump if they are on ground. It exhausts the player by 0.05 food points, an additional 0.15
@@ -1519,8 +1519,15 @@ func (p *Player) SetGameMode(mode world.GameMode) {
 	previous := p.GameMode()
 	p.gameMode = mode
 
+	// The flying state is updated directly, rather than through StartFlying
+	// and StopFlying, so that the client receives its game mode and abilities
+	// only once, in a consistent state.
 	if !mode.AllowsFlying() {
-		p.StopFlying()
+		p.flying = false
+	} else if !mode.HasCollision() {
+		// Players that move through blocks must always fly, or they would fall
+		// through the ground.
+		p.flying = true
 	}
 	if !mode.Visible() {
 		p.SetInvisible()
@@ -1529,8 +1536,19 @@ func (p *Player) SetGameMode(mode world.GameMode) {
 	}
 
 	p.session().SendGameMode(p)
+	if !mode.HasCollision() && previous.HasCollision() && p.s != nil {
+		// If the client is currently on the ground and turned to spectator mode, it will be unable to sprint during
+		// flight. In order to allow this, we force the client to be flying through a MovePlayer packet.
+		p.session().ViewEntityTeleport(p, p.Position())
+	}
 	for _, v := range p.viewers() {
 		v.ViewEntityGameMode(p)
+		if mode.Visible() != previous.Visible() {
+			// Held items and armour are hidden for players that are not
+			// visible, so they need to be sent again.
+			v.ViewEntityItems(p)
+			v.ViewEntityArmour(p)
+		}
 	}
 	if mode.AllowsTakingDamage() {
 		p.session().SendHealth(p.Health(), p.MaxHealth(), p.absorptionHealth)
@@ -1576,6 +1594,9 @@ func (p *Player) SetCooldown(item world.Item, cooldown time.Duration) {
 // unless the held item implements the item.Usable interface, in which case it will be activated.
 // This generally happens for items such as throwable items like snowballs.
 func (p *Player) UseItem() {
+	if !p.GameMode().AllowsInteraction() {
+		return
+	}
 	i, _ := p.HeldItems()
 	ctx := NewEventContext(p.tx, p)
 	if p.HasCooldown(i.Item()) {
@@ -3182,7 +3203,7 @@ func (p *Player) SwingArm() {
 
 // PunchAir makes the player punch the air and plays the sound for attacking with no damage.
 func (p *Player) PunchAir() {
-	if p.Dead() {
+	if p.Dead() || !p.GameMode().AllowsInteraction() {
 		return
 	}
 	ctx := NewEventContext(p.tx, p)

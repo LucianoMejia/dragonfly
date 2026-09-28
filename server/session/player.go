@@ -528,10 +528,6 @@ func (s *Session) SendAbilities(c Controllable) {
 	}
 	if !mode.HasCollision() {
 		abilities |= protocol.AbilityNoClip
-		defer c.StartFlying()
-		// If the client is currently on the ground and turned to spectator mode, it will be unable to sprint during
-		// flight. In order to allow this, we force the client to be flying through a MovePlayer packet.
-		s.ViewEntityTeleport(c, c.Position())
 	}
 	if !mode.AllowsTakingDamage() {
 		abilities |= protocol.AbilityInvulnerable
@@ -1327,7 +1323,18 @@ func gameTypeFromMode(mode world.GameMode) int32 {
 	if mode.AllowsFlying() && mode.CreativeInventory() {
 		return packet.GameTypeCreative
 	}
+	if spectatorMode(mode) {
+		return packet.GameTypeSpectator
+	}
 	return packet.GameTypeSurvival
+}
+
+// spectatorMode checks if the game mode passed behaves like spectator mode: The
+// player flies through blocks and cannot interact with the world or be seen.
+// The client hides the hotbar and held items of players in spectator mode and
+// forces them to fly.
+func spectatorMode(mode world.GameMode) bool {
+	return mode.AllowsFlying() && !mode.HasCollision() && !mode.AllowsInteraction() && !mode.AllowsEditing() && !mode.Visible()
 }
 
 // The following functions use the go:linkname directive in order to make sure the item.byID and item.toID

@@ -306,6 +306,9 @@ func (s *Session) ViewEntityItems(e world.Entity) {
 	}
 
 	mainHand, offHand := c.HeldItems()
+	if equipmentHidden(e) {
+		mainHand, offHand = item.Stack{}, item.Stack{}
+	}
 
 	// Show the main hand item.
 	s.writePacket(&packet.MobEquipment{
@@ -338,15 +341,28 @@ func (s *Session) ViewEntityArmour(e world.Entity) {
 	if inv == nil {
 		return
 	}
+	helmet, chestplate, leggings, boots := inv.Helmet(), inv.Chestplate(), inv.Leggings(), inv.Boots()
+	if equipmentHidden(e) {
+		helmet, chestplate, leggings, boots = item.Stack{}, item.Stack{}, item.Stack{}, item.Stack{}
+	}
 
 	// Show the entity's armour
 	s.writePacket(&packet.MobArmourEquipment{
 		EntityRuntimeID: runtimeID,
-		Helmet:          instanceFromItem(s.br, inv.Helmet()),
-		Chestplate:      instanceFromItem(s.br, inv.Chestplate()),
-		Leggings:        instanceFromItem(s.br, inv.Leggings()),
-		Boots:           instanceFromItem(s.br, inv.Boots()),
+		Helmet:          instanceFromItem(s.br, helmet),
+		Chestplate:      instanceFromItem(s.br, chestplate),
+		Leggings:        instanceFromItem(s.br, leggings),
+		Boots:           instanceFromItem(s.br, boots),
 	})
+}
+
+// equipmentHidden checks if the held items and armour of an entity should be
+// hidden from viewers. This is the case for players in a game mode that makes
+// them invisible, such as spectator mode: The invisible flag only hides the
+// body of a player, not its held items and armour.
+func equipmentHidden(e world.Entity) bool {
+	g, ok := e.(interface{ GameMode() world.GameMode })
+	return ok && !g.GameMode().Visible()
 }
 
 // ViewItemCooldown ...
