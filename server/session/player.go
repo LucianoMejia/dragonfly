@@ -541,20 +541,29 @@ func (s *Session) SendAbilities(c Controllable) {
 	if mode.AllowsInteraction() {
 		abilities |= protocol.AbilityDoorsAndSwitches | protocol.AbilityOpenContainers | protocol.AbilityAttackPlayers | protocol.AbilityAttackMobs
 	}
+	layers := []protocol.AbilityLayer{{
+		Type:             protocol.AbilityLayerTypeBase,
+		Abilities:        protocol.AbilityCount - 1,
+		Values:           abilities,
+		FlySpeed:         float32(c.FlightSpeed()),
+		VerticalFlySpeed: float32(c.VerticalFlightSpeed()),
+		WalkSpeed:        protocol.AbilityBaseWalkSpeed,
+	}}
+	if !mode.HasCollision() && mode.AllowsFlying() {
+		// The client stops flying and falls as soon as it moves into a block,
+		// unless flying is forced through the spectator layer. The client reads
+		// the flying state from this layer whenever it is present.
+		layers = append(layers, protocol.AbilityLayer{
+			Type:      protocol.AbilityLayerTypeSpectator,
+			Abilities: protocol.AbilityFlying,
+			Values:    protocol.AbilityFlying,
+		})
+	}
 	s.writePacket(&packet.UpdateAbilities{AbilityData: protocol.AbilityData{
 		EntityUniqueID:     selfEntityRuntimeID,
 		PlayerPermissions:  packet.PermissionLevelMember,
 		CommandPermissions: protocol.CommandPermissionLevelAny,
-		Layers: []protocol.AbilityLayer{
-			{
-				Type:             protocol.AbilityLayerTypeBase,
-				Abilities:        protocol.AbilityCount - 1,
-				Values:           abilities,
-				FlySpeed:         float32(c.FlightSpeed()),
-				VerticalFlySpeed: float32(c.VerticalFlightSpeed()),
-				WalkSpeed:        protocol.AbilityBaseWalkSpeed,
-			},
-		},
+		Layers:             layers,
 	}})
 }
 
@@ -1320,13 +1329,15 @@ func debugShapeToProtocol(shape debug.Shape, dim world.Dimension, attachedEntity
 
 // gameTypeFromMode returns the game type ID from the game mode passed.
 func gameTypeFromMode(mode world.GameMode) int32 {
-	if mode.AllowsFlying() && mode.CreativeInventory() {
+	// Game modes that move through blocks, such as spectator mode, are sent as
+	// creative rather than as the spectator game type: A client in the
+	// spectator game type hides its hotbar and never uses items, which servers
+	// rely on for items such as menus. A client in the survival game type, on
+	// the other hand, does not keep flying through blocks. Moving through blocks
+	// and the lack of interaction are handled by the abilities of the player.
+	if mode.AllowsFlying() && (mode.CreativeInventory() || !mode.HasCollision()) {
 		return packet.GameTypeCreative
 	}
-	// Spectator mode is deliberately sent as survival: A client in the
-	// spectator game type hides its hotbar and does not use items, which
-	// servers rely on for items such as menus. Flying and moving through blocks
-	// are granted through the abilities of the player instead.
 	return packet.GameTypeSurvival
 }
 

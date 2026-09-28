@@ -12,8 +12,9 @@ func TestGameTypeFromMode(t *testing.T) {
 		world.GameModeSurvival:  packet.GameTypeSurvival,
 		world.GameModeCreative:  packet.GameTypeCreative,
 		world.GameModeAdventure: packet.GameTypeSurvival,
-		// Spectators are sent as survival so that they can still use items.
-		world.GameModeSpectator: packet.GameTypeSurvival,
+		// Spectators are sent as creative so that they can still use items and
+		// keep flying through blocks.
+		world.GameModeSpectator: packet.GameTypeCreative,
 	} {
 		if got := gameTypeFromMode(mode); got != want {
 			t.Errorf("gameTypeFromMode(%T) = %v, want %v", mode, got, want)
