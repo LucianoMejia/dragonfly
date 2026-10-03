@@ -1179,6 +1179,11 @@ func (s *Session) ViewEntityAnimation(e world.Entity, a world.EntityAnimation) {
 	})
 }
 
+// CloseContainer ...
+func (s *Session) CloseContainer(tx *world.Tx) {
+	s.closeCurrentContainer(tx, false)
+}
+
 // OpenBlockContainer ...
 func (s *Session) OpenBlockContainer(pos cube.Pos, tx *world.Tx) {
 	if s.containerOpened.Load() && *s.openedPos.Load() == pos {
