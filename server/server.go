@@ -5,12 +5,14 @@ import (
 	_ "embed"
 	"encoding/base64"
 	"fmt"
+	"image/color"
 	"iter"
 	"maps"
 	"os"
 	"os/signal"
 	"runtime/debug"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -631,6 +633,23 @@ func (srv *Server) createWorld(dim world.Dimension, nether, end **world.World) *
 	return w
 }
 
+// parseSkinColour parses the base colour of a skin, a hex colour like
+// "#b37b62". It returns the zero colour if it isn't valid.
+func parseSkinColour(s string) color.RGBA {
+	s = strings.TrimPrefix(s, "#")
+	if len(s) != 6 && len(s) != 8 {
+		return color.RGBA{}
+	}
+	v, err := strconv.ParseUint(s, 16, 32)
+	if err != nil {
+		return color.RGBA{}
+	}
+	if len(s) == 6 {
+		return color.RGBA{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v), A: 0xff}
+	}
+	return color.RGBA{R: uint8(v >> 24), G: uint8(v >> 16), B: uint8(v >> 8), A: uint8(v)}
+}
+
 // parseSkin parses a skin from the login.ClientData and returns it.
 func (srv *Server) parseSkin(data login.ClientData) skin.Skin {
 	// Gophertunnel guarantees the following values are valid data and are of
@@ -647,6 +666,11 @@ func (srv *Server) parseSkin(data login.ClientData) skin.Skin {
 
 	playerSkin.Cape = skin.NewCape(data.CapeImageWidth, data.CapeImageHeight)
 	playerSkin.Cape.Pix, _ = base64.StdEncoding.DecodeString(data.CapeData)
+	playerSkin.CapeID = data.CapeID
+	playerSkin.CapeOnClassicSkin = data.CapeOnClassicSkin
+	playerSkin.Premium = data.PremiumSkin
+	playerSkin.ArmSize = data.ArmSize
+	playerSkin.Colour = parseSkinColour(data.SkinColour)
 
 	for _, animation := range data.AnimatedImageData {
 		var t skin.AnimationType

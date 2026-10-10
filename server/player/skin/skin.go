@@ -29,6 +29,17 @@ type Skin struct {
 	// Cape holds the cape of the skin. By default, an empty cape is set in the skin. Cape.Exists() may be
 	// called to check if the cape actually has any data.
 	Cape Cape
+	// CapeID identifies the cape of the skin. It is empty if the skin has no cape.
+	CapeID string
+	// CapeOnClassicSkin specifies if the cape is worn on a classic (non-persona) skin. The client needs it
+	// to show capes, such as persona or marketplace capes, on classic skins.
+	CapeOnClassicSkin bool
+	// Premium specifies if the skin was obtained through the marketplace.
+	Premium bool
+	// ArmSize is the size of the arms of the model: "wide" or "slim". Empty is treated as "wide".
+	ArmSize string
+	// Colour is the base colour of the skin.
+	Colour color.RGBA
 
 	// Animations holds a list of all animations that the skin has. These animations must be pointed to in the
 	// ModelConfig, in order to display them on the skin.

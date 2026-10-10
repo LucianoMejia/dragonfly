@@ -1158,6 +1158,14 @@ func protocolToSkin(sk protocol.Skin) (s skin.Skin, err error) {
 
 	s.Cape = skin.NewCape(int(sk.CapeImageWidth), int(sk.CapeImageHeight))
 	s.Cape.Pix = sk.CapeData
+	s.CapeID = sk.CapeID
+	s.CapeOnClassicSkin = sk.PersonaCapeOnClassicSkin
+	s.Premium = sk.PremiumSkin
+	s.Colour = sk.SkinColour
+	s.ArmSize = "wide"
+	if sk.ArmSize == protocol.ArmSizeSlim {
+		s.ArmSize = "slim"
+	}
 
 	m := make(map[string]any)
 	if err = json.Unmarshal(sk.SkinGeometry, &m); err != nil {

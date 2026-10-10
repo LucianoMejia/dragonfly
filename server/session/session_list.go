@@ -134,6 +134,16 @@ func skinToProtocol(s skin.Skin) protocol.Skin {
 	if len(model) == 0 {
 		model = []byte("{}")
 	}
+	// Keep the cape, its ID and whether it's on a classic skin as the client
+	// sent them: without them capes on classic skins don't show.
+	capeID := s.CapeID
+	if capeID == "" && len(s.Cape.Pix) > 0 {
+		capeID = uuid.New().String()
+	}
+	armSize := uint8(protocol.ArmSizeWide)
+	if s.ArmSize == "slim" {
+		armSize = protocol.ArmSizeSlim
+	}
 	return protocol.Skin{
 		PlayFabID:                 s.PlayFabID,
 		SkinID:                    uuid.New().String(),
@@ -146,7 +156,11 @@ func skinToProtocol(s skin.Skin) protocol.Skin {
 		CapeData:                  s.Cape.Pix,
 		SkinGeometry:              model,
 		PersonaSkin:               s.Persona,
-		CapeID:                    uuid.New().String(),
+		CapeID:                    capeID,
+		PersonaCapeOnClassicSkin:  s.CapeOnClassicSkin,
+		PremiumSkin:               s.Premium,
+		ArmSize:                   armSize,
+		SkinColour:                s.Colour,
 		FullID:                    fullID,
 		Animations:                animations,
 		Trusted:                   true,
