@@ -230,6 +230,8 @@ func init() {
 	registerAll(allSandstones())
 	registerAll(allSaplings())
 	registerAll(allSeaPickles())
+	registerAll(allSeagrass())
+	registerAll(allVegetation())
 	registerAll(allSigns())
 	registerAll(allSkulls())
 	registerAll(allSlabs())
@@ -416,6 +418,10 @@ func init() {
 	world.RegisterItem(Sand{})
 	world.RegisterItem(SeaLantern{})
 	world.RegisterItem(SeaPickle{})
+	world.RegisterItem(Seagrass{})
+	for _, it := range vegetationItems() {
+		world.RegisterItem(it)
+	}
 	world.RegisterItem(Shroomlight{})
 	world.RegisterItem(Slime{})
 	world.RegisterItem(SmithingTable{})
