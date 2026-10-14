@@ -156,14 +156,8 @@ func (h PlayerAuthInputHandler) handleInputFlags(flags protocol.InputFlags, s *S
 			c.StartFlying()
 		}
 	}
-	if flags.Load(packet.InputFlagStopFlying) {
-		if !c.GameMode().HasCollision() {
-			// Players that move through blocks, such as spectators, cannot
-			// stop flying, or they would fall through the ground.
-			s.SendAbilities(c)
-		} else {
-			c.StopFlying()
-		}
+	if flags.Load(packet.InputFlagStopFlying) && c.GameMode() != world.GameModeSpectator {
+		c.StopFlying()
 	}
 }
 

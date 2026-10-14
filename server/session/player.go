@@ -528,6 +528,10 @@ func (s *Session) SendAbilities(c Controllable) {
 	}
 	if !mode.HasCollision() {
 		abilities |= protocol.AbilityNoClip
+		defer c.StartFlying()
+		// If the client is currently on the ground and turned to spectator mode, it will be unable to sprint during
+		// flight. In order to allow this, we force the client to be flying through a MovePlayer packet.
+		s.ViewEntityTeleport(c, c.Position())
 	}
 	if !mode.AllowsTakingDamage() {
 		abilities |= protocol.AbilityInvulnerable
@@ -541,30 +545,39 @@ func (s *Session) SendAbilities(c Controllable) {
 	if mode.AllowsInteraction() {
 		abilities |= protocol.AbilityDoorsAndSwitches | protocol.AbilityOpenContainers | protocol.AbilityAttackPlayers | protocol.AbilityAttackMobs
 	}
-	layers := []protocol.AbilityLayer{{
-		Type:             protocol.AbilityLayerTypeBase,
-		Abilities:        protocol.AbilityCount - 1,
-		Values:           abilities,
-		FlySpeed:         float32(c.FlightSpeed()),
-		VerticalFlySpeed: float32(c.VerticalFlightSpeed()),
-		WalkSpeed:        protocol.AbilityBaseWalkSpeed,
-	}}
-	if !mode.HasCollision() && mode.AllowsFlying() {
-		// The client stops flying and falls as soon as it moves into a block,
-		// unless flying is forced through the spectator layer. The client reads
-		// the flying state from this layer whenever it is present.
-		layers = append(layers, protocol.AbilityLayer{
-			Type:      protocol.AbilityLayerTypeSpectator,
-			Abilities: protocol.AbilityFlying,
-			Values:    protocol.AbilityFlying,
-		})
+	if mode == world.GameModeSpectator {
+		abilities = protocol.AbilityBuild | protocol.AbilityMine | protocol.AbilityDoorsAndSwitches | protocol.AbilityOpenContainers |
+			protocol.AbilityAttackPlayers | protocol.AbilityAttackMobs
 	}
-	s.writePacket(&packet.UpdateAbilities{AbilityData: protocol.AbilityData{
+	pk := &packet.UpdateAbilities{AbilityData: protocol.AbilityData{
 		EntityUniqueID:     selfEntityRuntimeID,
 		PlayerPermissions:  packet.PermissionLevelMember,
 		CommandPermissions: protocol.CommandPermissionLevelAny,
-		Layers:             layers,
-	}})
+		Layers: []protocol.AbilityLayer{
+			{
+				Type:             protocol.AbilityLayerTypeBase,
+				Abilities:        protocol.AbilityCount - 1,
+				Values:           abilities,
+				FlySpeed:         float32(c.FlightSpeed()),
+				VerticalFlySpeed: float32(c.VerticalFlightSpeed()),
+				WalkSpeed:        protocol.AbilityBaseWalkSpeed,
+			},
+		},
+	}}
+	if mode == world.GameModeSpectator {
+		pk.AbilityData.Layers = append([]protocol.AbilityLayer{spectatorAbilityLayer}, pk.AbilityData.Layers...)
+	}
+	s.writePacket(pk)
+}
+
+// spectatorAbilityLayer is the ability layer sent on top of the base layer of a player in spectator mode. It keeps
+// the player flying and passing through blocks, while preventing it from stopping flight or interacting with the world.
+var spectatorAbilityLayer = protocol.AbilityLayer{
+	Type: protocol.AbilityLayerTypeSpectator,
+	Abilities: protocol.AbilityBuild | protocol.AbilityMine | protocol.AbilityDoorsAndSwitches | protocol.AbilityOpenContainers |
+		protocol.AbilityAttackPlayers | protocol.AbilityAttackMobs | protocol.AbilityInvulnerable | protocol.AbilityFlying |
+		protocol.AbilityMayFly | protocol.AbilityInstantBuild | protocol.AbilityNoClip,
+	Values: protocol.AbilityInvulnerable | protocol.AbilityFlying | protocol.AbilityNoClip,
 }
 
 // SendHealth sends the health and max health to the player.
@@ -1329,13 +1342,10 @@ func debugShapeToProtocol(shape debug.Shape, dim world.Dimension, attachedEntity
 
 // gameTypeFromMode returns the game type ID from the game mode passed.
 func gameTypeFromMode(mode world.GameMode) int32 {
-	// Game modes that move through blocks, such as spectator mode, are sent as
-	// creative rather than as the spectator game type: A client in the
-	// spectator game type hides its hotbar and never uses items, which servers
-	// rely on for items such as menus. A client in the survival game type, on
-	// the other hand, does not keep flying through blocks. Moving through blocks
-	// and the lack of interaction are handled by the abilities of the player.
-	if mode.AllowsFlying() && (mode.CreativeInventory() || !mode.HasCollision()) {
+	if mode == world.GameModeSpectator {
+		return packet.GameTypeSpectator
+	}
+	if mode.AllowsFlying() && mode.CreativeInventory() {
 		return packet.GameTypeCreative
 	}
 	return packet.GameTypeSurvival

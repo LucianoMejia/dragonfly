@@ -909,7 +909,7 @@ func (p *Player) kill(src world.DamageSource) {
 	p.StopSprinting()
 
 	pos := p.Position()
-	if !keepInv {
+	if !keepInv && p.GameMode() != world.GameModeSpectator {
 		p.dropItems()
 	}
 	for _, e := range p.Effects() {
@@ -1251,7 +1251,7 @@ func (p *Player) StartFlying() {
 		return
 	}
 	p.flying = true
-	p.session().SendAbilities(p)
+	p.session().SendGameMode(p)
 }
 
 // Flying checks if the player is currently flying.
@@ -1265,7 +1265,7 @@ func (p *Player) StopFlying() {
 		return
 	}
 	p.flying = false
-	p.session().SendAbilities(p)
+	p.session().SendGameMode(p)
 }
 
 // Jump makes the player jump if they are on ground. It exhausts the player by 0.05 food points, an additional 0.15
@@ -1519,36 +1519,21 @@ func (p *Player) SetGameMode(mode world.GameMode) {
 	previous := p.GameMode()
 	p.gameMode = mode
 
-	// The flying state is updated directly, rather than through StartFlying
-	// and StopFlying, so that the client receives its game mode and abilities
-	// only once, in a consistent state.
 	if !mode.AllowsFlying() {
-		p.flying = false
-	} else if !mode.HasCollision() {
-		// Players that move through blocks must always fly, or they would fall
-		// through the ground.
-		p.flying = true
+		p.StopFlying()
 	}
-	if !mode.Visible() {
+	if !mode.Visible() && mode != world.GameModeSpectator {
 		p.SetInvisible()
 	} else if !previous.Visible() {
 		p.SetVisible()
 	}
+	if mode == world.GameModeSpectator {
+		p.session().CloseContainer(p.tx)
+	}
 
 	p.session().SendGameMode(p)
-	if !mode.HasCollision() && previous.HasCollision() && p.s != nil {
-		// If the client is currently on the ground and turned to spectator mode, it will be unable to sprint during
-		// flight. In order to allow this, we force the client to be flying through a MovePlayer packet.
-		p.session().ViewEntityTeleport(p, p.Position())
-	}
 	for _, v := range p.viewers() {
 		v.ViewEntityGameMode(p)
-		if mode.Visible() != previous.Visible() {
-			// Held items and armour are hidden for players that are not
-			// visible, so they need to be sent again.
-			v.ViewEntityItems(p)
-			v.ViewEntityArmour(p)
-		}
 	}
 	if mode.AllowsTakingDamage() {
 		p.session().SendHealth(p.Health(), p.MaxHealth(), p.absorptionHealth)
@@ -1593,21 +1578,16 @@ func (p *Player) SetCooldown(item world.Item, cooldown time.Duration) {
 // UseItem uses the item currently held in the player's main hand in the air. Generally, nothing happens,
 // unless the held item implements the item.Usable interface, in which case it will be activated.
 // This generally happens for items such as throwable items like snowballs.
-// If the player's game mode does not allow interaction, such as spectator mode, only Handler.HandleItemUse
-// is called and the item itself is not used.
 func (p *Player) UseItem() {
+	if p.GameMode() == world.GameModeSpectator {
+		return
+	}
 	i, _ := p.HeldItems()
 	ctx := NewEventContext(p.tx, p)
 	if p.HasCooldown(i.Item()) {
 		return
 	}
 	if p.Handler().HandleItemUse(ctx); ctx.Cancelled() {
-		return
-	}
-	if !p.GameMode().AllowsInteraction() {
-		// Players that cannot interact with the world, such as spectators,
-		// still trigger HandleItemUse, so that items may be used for things
-		// like menus, but the items themselves do nothing.
 		return
 	}
 	i, left := p.HeldItems()
@@ -2158,6 +2138,9 @@ func (p *Player) obstructedPos(pos cube.Pos, b world.Block) (obstructed, selfOnl
 		case entity.ItemType, entity.ArrowType, entity.ExperienceOrbType:
 			continue
 		default:
+			if g, ok := e.(interface{ GameMode() world.GameMode }); ok && g.GameMode() == world.GameModeSpectator {
+				continue
+			}
 			if cube.AnyIntersections(blockBoxes, t.BBox(e).Translate(e.Position()).Grow(-1e-4)) {
 				obstructed = true
 				if e.H() == p.handle {
@@ -3006,6 +2989,9 @@ func (p *Player) checkBlockCollisions(vel mgl64.Vec3) {
 
 // checkEntityInsiders checks if the player is colliding with any EntityInsider blocks.
 func (p *Player) checkEntityInsiders(entityBBox cube.BBox) {
+	if p.GameMode() == world.GameModeSpectator {
+		return
+	}
 	box := entityBBox.Grow(-0.0001)
 	low, high := cube.PosFromVec3(box.Min()), cube.PosFromVec3(box.Max())
 
@@ -3033,7 +3019,7 @@ func (p *Player) checkEntityInsiders(entityBBox cube.BBox) {
 
 // checkEntitySteppers checks if the player is standing on any EntityStepper blocks.
 func (p *Player) checkEntitySteppers() {
-	if !p.OnGround() {
+	if !p.OnGround() || p.GameMode() == world.GameModeSpectator {
 		return
 	}
 	low, high := p.blocksUnder()
@@ -3208,7 +3194,7 @@ func (p *Player) SwingArm() {
 
 // PunchAir makes the player punch the air and plays the sound for attacking with no damage.
 func (p *Player) PunchAir() {
-	if p.Dead() || !p.GameMode().AllowsInteraction() {
+	if p.Dead() {
 		return
 	}
 	ctx := NewEventContext(p.tx, p)
