@@ -186,6 +186,7 @@ const (
 	hashSapling
 	hashSeaLantern
 	hashSeaPickle
+	hashSeagrass
 	hashShelfMushroom
 	hashShortGrass
 	hashShroomlight
@@ -230,6 +231,31 @@ const (
 	hashWoodFenceGate
 	hashWoodTrapdoor
 	hashWool
+	hashSmallDripleaf
+	hashBigDripleaf
+	hashGlowLichen
+	hashSculkVein
+	hashHangingRoots
+	hashPointedDripstone
+	hashMangrovePropagule
+	hashCaveVines
+	hashNetherVines
+	hashMossBlock
+	hashPaleMossCarpet
+	hashPaleHangingMoss
+	hashBush
+	hashDryGrass
+	hashWildflowers
+	hashLeafLitter
+	hashAzalea
+	hashEyeblossom
+	hashTorchflower
+	hashCactusFlower
+	hashPitcherPlant
+	hashSweetBerryBush
+	hashFrogSpawn
+	hashRootedDirt
+	hashCoralFan
 	hashCustomBlockBase
 )
 
@@ -977,6 +1003,10 @@ func (s SeaPickle) Hash() (uint64, uint64) {
 	return hashSeaPickle, uint64(s.AdditionalCount) | uint64(boolByte(s.Dead))<<8
 }
 
+func (s Seagrass) Hash() (uint64, uint64) {
+	return hashSeagrass, uint64(boolByte(s.Tall)) | uint64(boolByte(s.UpperPart))<<1
+}
+
 func (s ShelfMushroom) Hash() (uint64, uint64) {
 	return hashShelfMushroom, uint64(s.Facing) | uint64(boolByte(s.Large))<<2
 }
@@ -1151,4 +1181,104 @@ func (t WoodTrapdoor) Hash() (uint64, uint64) {
 
 func (w Wool) Hash() (uint64, uint64) {
 	return hashWool, uint64(w.Colour.Uint8())
+}
+
+func (s SmallDripleaf) Hash() (uint64, uint64) {
+	return hashSmallDripleaf, uint64(s.Facing) | uint64(boolByte(s.UpperPart))<<2
+}
+
+func (s BigDripleaf) Hash() (uint64, uint64) {
+	return hashBigDripleaf, uint64(s.Facing) | uint64(boolByte(s.Head))<<2 | uint64(s.Tilt)<<3
+}
+
+func (s GlowLichen) Hash() (uint64, uint64) {
+	return hashGlowLichen, uint64(s.Faces)
+}
+
+func (s SculkVein) Hash() (uint64, uint64) {
+	return hashSculkVein, uint64(s.Faces)
+}
+
+func (HangingRoots) Hash() (uint64, uint64) {
+	return hashHangingRoots, 0
+}
+
+func (s PointedDripstone) Hash() (uint64, uint64) {
+	return hashPointedDripstone, uint64(s.Thickness) | uint64(boolByte(s.Hanging))<<3
+}
+
+func (s MangrovePropagule) Hash() (uint64, uint64) {
+	return hashMangrovePropagule, uint64(s.Stage) | uint64(boolByte(s.Hanging))<<3
+}
+
+func (s CaveVines) Hash() (uint64, uint64) {
+	return hashCaveVines, uint64(s.Age) | uint64(s.Berries)<<5
+}
+
+func (s NetherVines) Hash() (uint64, uint64) {
+	return hashNetherVines, uint64(s.Age) | uint64(boolByte(s.Weeping))<<5
+}
+
+func (s MossBlock) Hash() (uint64, uint64) {
+	return hashMossBlock, uint64(boolByte(s.Pale))
+}
+
+func (s PaleMossCarpet) Hash() (uint64, uint64) {
+	return hashPaleMossCarpet, uint64(boolByte(s.UpperPart)) | uint64(s.North)<<1 | uint64(s.East)<<3 | uint64(s.South)<<5 | uint64(s.West)<<7
+}
+
+func (s PaleHangingMoss) Hash() (uint64, uint64) {
+	return hashPaleHangingMoss, uint64(boolByte(s.Tip))
+}
+
+func (s Bush) Hash() (uint64, uint64) {
+	return hashBush, uint64(boolByte(s.Firefly))
+}
+
+func (s DryGrass) Hash() (uint64, uint64) {
+	return hashDryGrass, uint64(boolByte(s.Tall))
+}
+
+func (s Wildflowers) Hash() (uint64, uint64) {
+	return hashWildflowers, uint64(s.Growth) | uint64(s.Facing)<<3
+}
+
+func (s LeafLitter) Hash() (uint64, uint64) {
+	return hashLeafLitter, uint64(s.Growth) | uint64(s.Facing)<<3
+}
+
+func (s Azalea) Hash() (uint64, uint64) {
+	return hashAzalea, uint64(boolByte(s.Flowering))
+}
+
+func (s Eyeblossom) Hash() (uint64, uint64) {
+	return hashEyeblossom, uint64(boolByte(s.Open))
+}
+
+func (Torchflower) Hash() (uint64, uint64) {
+	return hashTorchflower, 0
+}
+
+func (CactusFlower) Hash() (uint64, uint64) {
+	return hashCactusFlower, 0
+}
+
+func (s PitcherPlant) Hash() (uint64, uint64) {
+	return hashPitcherPlant, uint64(boolByte(s.UpperPart))
+}
+
+func (s SweetBerryBush) Hash() (uint64, uint64) {
+	return hashSweetBerryBush, uint64(s.Growth)
+}
+
+func (FrogSpawn) Hash() (uint64, uint64) {
+	return hashFrogSpawn, 0
+}
+
+func (RootedDirt) Hash() (uint64, uint64) {
+	return hashRootedDirt, 0
+}
+
+func (s CoralFan) Hash() (uint64, uint64) {
+	return hashCoralFan, uint64(s.Type.Uint8()) | uint64(boolByte(s.Dead))<<3 | uint64(boolByte(s.Wall))<<4 | uint64(s.WallFacing)<<5 | uint64(boolByte(s.Rotated))<<7
 }
