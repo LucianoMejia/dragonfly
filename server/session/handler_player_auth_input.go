@@ -156,7 +156,7 @@ func (h PlayerAuthInputHandler) handleInputFlags(flags protocol.InputFlags, s *S
 			c.StartFlying()
 		}
 	}
-	if flags.Load(packet.InputFlagStopFlying) && c.GameMode() != world.GameModeSpectator {
+	if flags.Load(packet.InputFlagStopFlying) && c.GameMode().HasCollision() {
 		c.StopFlying()
 	}
 }
