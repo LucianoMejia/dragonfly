@@ -2165,7 +2165,7 @@ func (p *Player) obstructedPos(pos cube.Pos, b world.Block) (obstructed, selfOnl
 		case entity.ItemType, entity.ArrowType, entity.ExperienceOrbType:
 			continue
 		default:
-			if g, ok := e.(interface{ GameMode() world.GameMode }); ok && !g.GameMode().HasCollision() {
+			if g, ok := e.(interface{ GameMode() world.GameMode }); ok && ghost(g.GameMode()) {
 				continue
 			}
 			if cube.AnyIntersections(blockBoxes, t.BBox(e).Translate(e.Position()).Grow(-1e-4)) {
@@ -3046,7 +3046,7 @@ func (p *Player) checkBlockCollisions(vel mgl64.Vec3) {
 
 // checkEntityInsiders checks if the player is colliding with any EntityInsider blocks.
 func (p *Player) checkEntityInsiders(entityBBox cube.BBox) {
-	if !p.GameMode().HasCollision() {
+	if ghost(p.GameMode()) {
 		return
 	}
 	box := entityBBox.Grow(-0.0001)
@@ -3076,7 +3076,7 @@ func (p *Player) checkEntityInsiders(entityBBox cube.BBox) {
 
 // checkEntitySteppers checks if the player is standing on any EntityStepper blocks.
 func (p *Player) checkEntitySteppers() {
-	if !p.OnGround() || !p.GameMode().HasCollision() {
+	if !p.OnGround() || ghost(p.GameMode()) {
 		return
 	}
 	low, high := p.blocksUnder()
@@ -3618,4 +3618,12 @@ func (p *Player) resendNearbyBlock(pos cube.Pos) {
 // end, which is typically used for sending messages, popups and tips.
 func format(a []any) string {
 	return strings.TrimSuffix(strings.TrimSuffix(fmt.Sprintln(a...), "\n"), "\n")
+}
+
+// ghost reports whether players in the game mode don't touch the world: game
+// modes that pass through blocks, or that nobody sees (custom spectator modes
+// that keep their collision so they can use items). They don't block the
+// placing of blocks, step on pressure plates or trigger tripwires.
+func ghost(mode world.GameMode) bool {
+	return !mode.HasCollision() || !mode.Visible()
 }

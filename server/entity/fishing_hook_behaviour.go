@@ -254,7 +254,7 @@ func (f *FishingHookBehaviour) ignores(e *Ent) trace.EntityFilter {
 		return func(yield func(world.Entity) bool) {
 			for other := range seq {
 				g, ok := other.(interface{ GameMode() world.GameMode })
-				spectator := ok && !g.GameMode().HasCollision()
+				spectator := ok && (!g.GameMode().HasCollision() || !g.GameMode().Visible())
 				_, living := other.(Living)
 				isItem := other.H().Type() == ItemType
 				if spectator || other.H() == e.H() || other.H() == f.conf.Owner || (!living && !isItem) {

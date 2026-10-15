@@ -371,7 +371,7 @@ func (lt *ProjectileBehaviour) ignores(e *Ent) trace.EntityFilter {
 		return func(yield func(world.Entity) bool) {
 			for other := range seq {
 				g, ok := other.(interface{ GameMode() world.GameMode })
-				spectator := ok && !g.GameMode().HasCollision()
+				spectator := ok && (!g.GameMode().HasCollision() || !g.GameMode().Visible())
 				itself := e.H() == other.H()
 				damageable := DamageableEntity(other)
 				owner := e.data.Age < time.Second/4 && lt.conf.Owner == other.H()
