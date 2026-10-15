@@ -911,7 +911,7 @@ func (p *Player) kill(src world.DamageSource) {
 	p.StopSprinting()
 
 	pos := p.Position()
-	if !keepInv && p.GameMode() != world.GameModeSpectator {
+	if !keepInv && p.GameMode().HasCollision() {
 		p.dropItems()
 	}
 	for _, e := range p.Effects() {
@@ -1536,6 +1536,12 @@ func (p *Player) SetGameMode(mode world.GameMode) {
 	p.session().SendGameMode(p)
 	for _, v := range p.viewers() {
 		v.ViewEntityGameMode(p)
+		if mode.Visible() != previous.Visible() {
+			// Held items and armour are hidden for players that are not
+			// visible, so they need to be sent again.
+			v.ViewEntityItems(p)
+			v.ViewEntityArmour(p)
+		}
 	}
 	if mode.AllowsTakingDamage() {
 		p.session().SendHealth(p.Health(), p.MaxHealth(), p.absorptionHealth)
@@ -1764,6 +1770,14 @@ func (p *Player) UsingItem() bool {
 // returns immediately.
 // UseItemOnBlock does nothing if the block at the cube.Pos passed is of the type block.Air.
 func (p *Player) UseItemOnBlock(pos cube.Pos, face cube.Face, clickPos mgl64.Vec3) {
+	if !p.GameMode().AllowsInteraction() {
+		// Players that can't interact with the world, such as custom spectator
+		// modes, use their item as if in the air: the block isn't touched, but
+		// items such as menus still work while looking at a block.
+		p.resendNearbyBlocks(pos, face)
+		p.UseItem()
+		return
+	}
 	if _, ok := p.tx.Block(pos).(block.Air); ok || !p.canReach(pos.Vec3Centre()) {
 		// The client used its item on a block that does not exist server-side or one it couldn't reach. Stop trying
 		// to use the item immediately.
@@ -1828,6 +1842,11 @@ func (p *Player) UseItemOnBlock(pos cube.Pos, face cube.Face, clickPos mgl64.Vec
 // within range of the player.
 // If the item held in the main hand of the player does nothing when used on an entity, nothing will happen.
 func (p *Player) UseItemOnEntity(e world.Entity) bool {
+	if !p.GameMode().AllowsInteraction() {
+		// As in UseItemOnBlock: the item is used as if in the air.
+		p.UseItem()
+		return false
+	}
 	if !p.canReach(e.Position()) {
 		return false
 	}
@@ -2140,7 +2159,7 @@ func (p *Player) obstructedPos(pos cube.Pos, b world.Block) (obstructed, selfOnl
 		case entity.ItemType, entity.ArrowType, entity.ExperienceOrbType:
 			continue
 		default:
-			if g, ok := e.(interface{ GameMode() world.GameMode }); ok && g.GameMode() == world.GameModeSpectator {
+			if g, ok := e.(interface{ GameMode() world.GameMode }); ok && !g.GameMode().HasCollision() {
 				continue
 			}
 			if cube.AnyIntersections(blockBoxes, t.BBox(e).Translate(e.Position()).Grow(-1e-4)) {
@@ -3021,7 +3040,7 @@ func (p *Player) checkBlockCollisions(vel mgl64.Vec3) {
 
 // checkEntityInsiders checks if the player is colliding with any EntityInsider blocks.
 func (p *Player) checkEntityInsiders(entityBBox cube.BBox) {
-	if p.GameMode() == world.GameModeSpectator {
+	if !p.GameMode().HasCollision() {
 		return
 	}
 	box := entityBBox.Grow(-0.0001)
@@ -3051,7 +3070,7 @@ func (p *Player) checkEntityInsiders(entityBBox cube.BBox) {
 
 // checkEntitySteppers checks if the player is standing on any EntityStepper blocks.
 func (p *Player) checkEntitySteppers() {
-	if !p.OnGround() || p.GameMode() == world.GameModeSpectator {
+	if !p.OnGround() || !p.GameMode().HasCollision() {
 		return
 	}
 	low, high := p.blocksUnder()

@@ -564,7 +564,10 @@ func (s *Session) SendAbilities(c Controllable) {
 			},
 		},
 	}}
-	if mode == world.GameModeSpectator {
+	if !mode.HasCollision() {
+		// Every game mode that moves through blocks gets the spectator layer:
+		// without it, the client stops flying and falls when it moves into a
+		// block.
 		pk.AbilityData.Layers = append([]protocol.AbilityLayer{spectatorAbilityLayer}, pk.AbilityData.Layers...)
 	}
 	s.writePacket(pk)
@@ -1353,7 +1356,11 @@ func gameTypeFromMode(mode world.GameMode) int32 {
 	if mode == world.GameModeSpectator {
 		return packet.GameTypeSpectator
 	}
-	if mode.AllowsFlying() && mode.CreativeInventory() {
+	// Other game modes that move through blocks (custom spectator modes that
+	// keep the hotbar and the use of items) are sent as creative: a survival
+	// client doesn't keep flying through blocks. The creative inventory isn't
+	// usable: the server refuses it unless CreativeInventory is true.
+	if mode.AllowsFlying() && (mode.CreativeInventory() || !mode.HasCollision()) {
 		return packet.GameTypeCreative
 	}
 	return packet.GameTypeSurvival
