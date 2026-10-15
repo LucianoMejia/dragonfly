@@ -1529,16 +1529,22 @@ func (p *Player) SetGameMode(mode world.GameMode) {
 	} else if !previous.Visible() {
 		p.SetVisible()
 	}
-	if mode == world.GameModeSpectator {
+	if !mode.HasCollision() {
 		p.session().CloseContainer(p.tx)
 	}
 
 	p.session().SendGameMode(p)
 	for _, v := range p.viewers() {
 		v.ViewEntityGameMode(p)
-		if mode.Visible() != previous.Visible() {
-			// Held items and armour are hidden for players that are not
-			// visible, so they need to be sent again.
+		switch {
+		case !mode.Visible() && previous.Visible():
+			// Players in a game mode that isn't visible are removed from the
+			// other players' clients: an invisible body would still show its
+			// movement, footsteps and sounds.
+			v.HideEntity(p)
+		case mode.Visible() && !previous.Visible():
+			v.ViewEntity(p)
+			v.ViewEntityState(p)
 			v.ViewEntityItems(p)
 			v.ViewEntityArmour(p)
 		}
