@@ -1770,6 +1770,14 @@ func (p *Player) UsingItem() bool {
 // returns immediately.
 // UseItemOnBlock does nothing if the block at the cube.Pos passed is of the type block.Air.
 func (p *Player) UseItemOnBlock(pos cube.Pos, face cube.Face, clickPos mgl64.Vec3) {
+	if !p.GameMode().AllowsInteraction() {
+		// Players that can't interact with the world, such as custom spectator
+		// modes, use their item as if in the air: the block isn't touched, but
+		// items such as menus still work while looking at a block.
+		p.resendNearbyBlocks(pos, face)
+		p.UseItem()
+		return
+	}
 	if _, ok := p.tx.Block(pos).(block.Air); ok || !p.canReach(pos.Vec3Centre()) {
 		// The client used its item on a block that does not exist server-side or one it couldn't reach. Stop trying
 		// to use the item immediately.
@@ -1834,6 +1842,11 @@ func (p *Player) UseItemOnBlock(pos cube.Pos, face cube.Face, clickPos mgl64.Vec
 // within range of the player.
 // If the item held in the main hand of the player does nothing when used on an entity, nothing will happen.
 func (p *Player) UseItemOnEntity(e world.Entity) bool {
+	if !p.GameMode().AllowsInteraction() {
+		// As in UseItemOnBlock: the item is used as if in the air.
+		p.UseItem()
+		return false
+	}
 	if !p.canReach(e.Position()) {
 		return false
 	}
