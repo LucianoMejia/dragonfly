@@ -545,7 +545,7 @@ func (s *Session) SendAbilities(c Controllable) {
 	if mode.AllowsInteraction() {
 		abilities |= protocol.AbilityDoorsAndSwitches | protocol.AbilityOpenContainers | protocol.AbilityAttackPlayers | protocol.AbilityAttackMobs
 	}
-	if mode == world.GameModeSpectator {
+	if !mode.HasCollision() {
 		abilities = protocol.AbilityBuild | protocol.AbilityMine | protocol.AbilityDoorsAndSwitches | protocol.AbilityOpenContainers |
 			protocol.AbilityAttackPlayers | protocol.AbilityAttackMobs
 	}
@@ -1353,14 +1353,12 @@ func debugShapeToProtocol(shape debug.Shape, dim world.Dimension, attachedEntity
 
 // gameTypeFromMode returns the game type ID from the game mode passed.
 func gameTypeFromMode(mode world.GameMode) int32 {
-	if mode == world.GameModeSpectator {
+	// Every game mode that moves through blocks is sent as spectator: the
+	// client only flies through blocks in the spectator game type.
+	if !mode.HasCollision() {
 		return packet.GameTypeSpectator
 	}
-	// Other game modes that move through blocks (custom spectator modes that
-	// keep the hotbar and the use of items) are sent as creative: a survival
-	// client doesn't keep flying through blocks. The creative inventory isn't
-	// usable: the server refuses it unless CreativeInventory is true.
-	if mode.AllowsFlying() && (mode.CreativeInventory() || !mode.HasCollision()) {
+	if mode.AllowsFlying() && mode.CreativeInventory() {
 		return packet.GameTypeCreative
 	}
 	return packet.GameTypeSurvival
