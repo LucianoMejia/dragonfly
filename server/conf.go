@@ -95,6 +95,9 @@ type Config struct {
 	// ReadOnlyWorld specifies if the standard worlds should be read only. If
 	// set to true, the WorldProvider won't be saved to at all.
 	ReadOnlyWorld bool
+	// DisablePortals stops nether and end portals from moving entities to
+	// the nether and end worlds: touching a portal does nothing.
+	DisablePortals bool
 	// Generator should return a function that specifies the world.Generator to
 	// use for every world.Dimension (world.Overworld, world.Nether and
 	// world.End). If left empty, Generator will be set to a flat world for each

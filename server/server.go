@@ -618,6 +618,9 @@ func (srv *Server) createWorld(dim world.Dimension, nether, end **world.World) *
 		Entities:            srv.conf.Entities,
 		Blocks:              srv.conf.Blocks,
 		PortalDestination: func(dim world.Dimension) *world.World {
+			if srv.conf.DisablePortals {
+				return nil
+			}
 			switch dim {
 			case world.Nether:
 				return *nether
