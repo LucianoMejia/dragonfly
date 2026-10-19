@@ -15,7 +15,7 @@ type ServerBoundLoadingScreenHandler struct {
 }
 
 // Handle ...
-func (h *ServerBoundLoadingScreenHandler) Handle(p packet.Packet, s *Session, _ *world.Tx, _ Controllable) error {
+func (h *ServerBoundLoadingScreenHandler) Handle(p packet.Packet, s *Session, _ *world.Tx, c Controllable) error {
 	pk := p.(*packet.ServerBoundLoadingScreen)
 	v, ok := pk.LoadingScreenID.Value()
 	expected := h.expectedID.Load()
@@ -28,6 +28,10 @@ func (h *ServerBoundLoadingScreenHandler) Handle(p packet.Packet, s *Session, _ 
 	case pk.Type == packet.LoadingScreenTypeEnd:
 		s.changingDimension.Store(false)
 		h.expectedID.Store(0)
+		// The client can reset the local player's abilities to the defaults of its game type when the dimension
+		// change ends, dropping what was sent during it (e.g. being able to fly in a survival game type with
+		// flying allowed, set right after moving to another world). Send them again now that it's done.
+		s.SendGameMode(c)
 	}
 
 	return nil
