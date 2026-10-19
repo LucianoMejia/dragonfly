@@ -87,3 +87,19 @@ func (s *Session) viewingEntity(handle *world.EntityHandle) bool {
 	s.entityMutex.RUnlock()
 	return ok
 }
+
+// ViewPowered overrides the powered flag of the entity for this session (see world.ViewLayer.ViewPowered).
+func (s *Session) ViewPowered(entity world.Entity, powered bool) {
+	if s.viewLayer == nil {
+		return
+	}
+	s.viewLayer.ViewPowered(entity, powered)
+}
+
+// ViewPublicPowered removes the powered flag override from the entity for this session.
+func (s *Session) ViewPublicPowered(entity world.Entity) {
+	if s.viewLayer == nil {
+		return
+	}
+	s.viewLayer.ViewPublicPowered(entity)
+}

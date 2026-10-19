@@ -12,6 +12,7 @@ type layer struct {
 	alwaysShowNameTag *bool
 	scoreTag          *string
 	visibility        VisibilityLevel
+	powered           *bool
 }
 
 // ViewLayerUpdater handles immediate updates after a ViewLayer changes how an entity is viewed.
@@ -140,6 +141,34 @@ func (v *ViewLayer) ViewVisibility(entity Entity, level VisibilityLevel) {
 	})
 }
 
+// ViewPowered overwrites the powered flag of the entity (the one of a charged creeper) for this ViewLayer.
+// The client only draws it for creepers, but a resource pack can read it (query.is_powered) to draw
+// something else, like a glow that only this viewer sees.
+func (v *ViewLayer) ViewPowered(entity Entity, powered bool) {
+	v.update(entity, func(l *layer) {
+		l.powered = &powered
+	})
+}
+
+// ViewPublicPowered removes the powered flag override from the entity.
+func (v *ViewLayer) ViewPublicPowered(entity Entity) {
+	v.update(entity, func(l *layer) {
+		l.powered = nil
+	})
+}
+
+// Powered returns the overwritten powered flag of the entity and whether an override was set.
+func (v *ViewLayer) Powered(entity Entity) (bool, bool) {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	powered := v.entities[entity.H()].powered
+	if powered == nil {
+		return false, false
+	}
+	return *powered, true
+}
+
 // Visibility returns the visibility of the entity.
 func (v *ViewLayer) Visibility(entity Entity) VisibilityLevel {
 	v.mu.RLock()
@@ -196,7 +225,7 @@ func (v *ViewLayer) Close() error {
 
 // empty checks if the layer does not override any public entity metadata.
 func (l layer) empty() bool {
-	return l.nameTag == nil && l.alwaysShowNameTag == nil && l.scoreTag == nil && l.visibility == PublicVisibility()
+	return l.nameTag == nil && l.alwaysShowNameTag == nil && l.scoreTag == nil && l.powered == nil && l.visibility == PublicVisibility()
 }
 
 func (v *ViewLayer) refresh(entity Entity) {

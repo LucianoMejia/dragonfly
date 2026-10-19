@@ -1179,6 +1179,13 @@ func (s *Session) entityMetadata(e world.Entity) protocol.EntityMetadata {
 	if st, ok := s.viewLayer.ScoreTag(e); ok {
 		metadata[protocol.EntityDataKeyScore] = st
 	}
+	if powered, ok := s.viewLayer.Powered(e); ok {
+		if powered {
+			metadata.SetFlag(protocol.EntityDataKeyFlags, protocol.EntityDataFlagPowered)
+		} else {
+			metadata.UnsetFlag(protocol.EntityDataKeyFlags, protocol.EntityDataFlagPowered)
+		}
+	}
 	if visibility := s.viewLayer.Visibility(e); visibility.EnforceVisibility() {
 		if visibility == world.EnforceInvisible() {
 			metadata.SetFlag(protocol.EntityDataKeyFlags, protocol.EntityDataFlagInvisible)
