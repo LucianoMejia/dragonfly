@@ -2825,6 +2825,17 @@ func (p *Player) ViewPublicAlwaysShowNameTag(entity world.Entity) {
 	p.session().ViewPublicAlwaysShowNameTag(entity)
 }
 
+// ViewPowered overrides the powered flag of the entity for this player. A resource pack can read it
+// (query.is_powered) to draw something only this player sees, like a glow.
+func (p *Player) ViewPowered(entity world.Entity, powered bool) {
+	p.session().ViewPowered(entity, powered)
+}
+
+// ViewPublicPowered removes the powered flag override of the entity for this player.
+func (p *Player) ViewPublicPowered(entity world.Entity) {
+	p.session().ViewPublicPowered(entity)
+}
+
 // ViewScoreTag overrides the public score tag of the entity for this player.
 func (p *Player) ViewScoreTag(entity world.Entity, scoreTag string) {
 	p.session().ViewScoreTag(entity, scoreTag)
