@@ -13,6 +13,7 @@ type layer struct {
 	scoreTag          *string
 	visibility        VisibilityLevel
 	powered           *bool
+	markVariant       *int32
 }
 
 // ViewLayerUpdater handles immediate updates after a ViewLayer changes how an entity is viewed.
@@ -169,6 +170,34 @@ func (v *ViewLayer) Powered(entity Entity) (bool, bool) {
 	return *powered, true
 }
 
+// ViewMarkVariant overwrites the mark variant of the entity for this ViewLayer. Most entities don't use it,
+// so a resource pack can read it (query.mark_variant) as a value only this viewer gets, like the colour of
+// an outline.
+func (v *ViewLayer) ViewMarkVariant(entity Entity, markVariant int32) {
+	v.update(entity, func(l *layer) {
+		l.markVariant = &markVariant
+	})
+}
+
+// ViewPublicMarkVariant removes the mark variant override from the entity.
+func (v *ViewLayer) ViewPublicMarkVariant(entity Entity) {
+	v.update(entity, func(l *layer) {
+		l.markVariant = nil
+	})
+}
+
+// MarkVariant returns the overwritten mark variant of the entity and whether an override was set.
+func (v *ViewLayer) MarkVariant(entity Entity) (int32, bool) {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+
+	markVariant := v.entities[entity.H()].markVariant
+	if markVariant == nil {
+		return 0, false
+	}
+	return *markVariant, true
+}
+
 // Visibility returns the visibility of the entity.
 func (v *ViewLayer) Visibility(entity Entity) VisibilityLevel {
 	v.mu.RLock()
@@ -225,7 +254,7 @@ func (v *ViewLayer) Close() error {
 
 // empty checks if the layer does not override any public entity metadata.
 func (l layer) empty() bool {
-	return l.nameTag == nil && l.alwaysShowNameTag == nil && l.scoreTag == nil && l.powered == nil && l.visibility == PublicVisibility()
+	return l.nameTag == nil && l.alwaysShowNameTag == nil && l.scoreTag == nil && l.powered == nil && l.markVariant == nil && l.visibility == PublicVisibility()
 }
 
 func (v *ViewLayer) refresh(entity Entity) {

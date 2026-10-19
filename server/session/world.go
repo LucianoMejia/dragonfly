@@ -1179,6 +1179,9 @@ func (s *Session) entityMetadata(e world.Entity) protocol.EntityMetadata {
 	if st, ok := s.viewLayer.ScoreTag(e); ok {
 		metadata[protocol.EntityDataKeyScore] = st
 	}
+	if mv, ok := s.viewLayer.MarkVariant(e); ok {
+		metadata[protocol.EntityDataKeyMarkVariant] = mv
+	}
 	if powered, ok := s.viewLayer.Powered(e); ok {
 		if powered {
 			metadata.SetFlag(protocol.EntityDataKeyFlags, protocol.EntityDataFlagPowered)
