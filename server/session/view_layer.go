@@ -103,3 +103,19 @@ func (s *Session) ViewPublicPowered(entity world.Entity) {
 	}
 	s.viewLayer.ViewPublicPowered(entity)
 }
+
+// ViewMarkVariant overrides the mark variant of the entity for this session (see world.ViewLayer.ViewMarkVariant).
+func (s *Session) ViewMarkVariant(entity world.Entity, markVariant int32) {
+	if s.viewLayer == nil {
+		return
+	}
+	s.viewLayer.ViewMarkVariant(entity, markVariant)
+}
+
+// ViewPublicMarkVariant removes the mark variant override from the entity for this session.
+func (s *Session) ViewPublicMarkVariant(entity world.Entity) {
+	if s.viewLayer == nil {
+		return
+	}
+	s.viewLayer.ViewPublicMarkVariant(entity)
+}

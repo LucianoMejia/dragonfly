@@ -2836,6 +2836,17 @@ func (p *Player) ViewPublicPowered(entity world.Entity) {
 	p.session().ViewPublicPowered(entity)
 }
 
+// ViewMarkVariant overrides the mark variant of the entity for this player. A resource pack can read it
+// (query.mark_variant) as a value only this player gets, like the colour of an outline.
+func (p *Player) ViewMarkVariant(entity world.Entity, markVariant int32) {
+	p.session().ViewMarkVariant(entity, markVariant)
+}
+
+// ViewPublicMarkVariant removes the mark variant override of the entity for this player.
+func (p *Player) ViewPublicMarkVariant(entity world.Entity) {
+	p.session().ViewPublicMarkVariant(entity)
+}
+
 // ViewScoreTag overrides the public score tag of the entity for this player.
 func (p *Player) ViewScoreTag(entity world.Entity, scoreTag string) {
 	p.session().ViewScoreTag(entity, scoreTag)
