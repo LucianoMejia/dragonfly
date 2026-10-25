@@ -1361,6 +1361,12 @@ func gameTypeFromMode(mode world.GameMode) int32 {
 	if mode.AllowsFlying() && mode.CreativeInventory() {
 		return packet.GameTypeCreative
 	}
+	// Game modes that can't break or place blocks are sent as adventure: in
+	// survival the client still cracks and breaks blocks on its own screen
+	// before the server puts them back.
+	if !mode.AllowsEditing() {
+		return packet.GameTypeAdventure
+	}
 	return packet.GameTypeSurvival
 }
 
