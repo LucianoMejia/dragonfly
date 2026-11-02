@@ -545,7 +545,7 @@ func (s *Session) SendAbilities(c Controllable) {
 	if mode.AllowsInteraction() {
 		abilities |= protocol.AbilityDoorsAndSwitches | protocol.AbilityOpenContainers | protocol.AbilityAttackPlayers | protocol.AbilityAttackMobs
 	}
-	if !mode.HasCollision() {
+	if mode == world.GameModeSpectator {
 		abilities = protocol.AbilityBuild | protocol.AbilityMine | protocol.AbilityDoorsAndSwitches | protocol.AbilityOpenContainers |
 			protocol.AbilityAttackPlayers | protocol.AbilityAttackMobs
 	}
@@ -564,10 +564,7 @@ func (s *Session) SendAbilities(c Controllable) {
 			},
 		},
 	}}
-	if !mode.HasCollision() {
-		// Every game mode that moves through blocks gets the spectator layer:
-		// without it, the client stops flying and falls when it moves into a
-		// block.
+	if mode == world.GameModeSpectator {
 		pk.AbilityData.Layers = append([]protocol.AbilityLayer{spectatorAbilityLayer}, pk.AbilityData.Layers...)
 	}
 	s.writePacket(pk)
@@ -1156,19 +1153,10 @@ func protocolToSkin(sk protocol.Skin) (s skin.Skin, err error) {
 	s.Persona = sk.PersonaSkin
 	s.Pix = sk.SkinData
 	s.Model = sk.SkinGeometry
-	s.PlayFabID = sk.PlayFabID
 	s.FullID = sk.FullID
 
 	s.Cape = skin.NewCape(int(sk.CapeImageWidth), int(sk.CapeImageHeight))
 	s.Cape.Pix = sk.CapeData
-	s.CapeID = sk.CapeID
-	s.CapeOnClassicSkin = sk.PersonaCapeOnClassicSkin
-	s.Premium = sk.PremiumSkin
-	s.Colour = sk.SkinColour
-	s.ArmSize = "wide"
-	if sk.ArmSize == protocol.ArmSizeSlim {
-		s.ArmSize = "slim"
-	}
 
 	m := make(map[string]any)
 	if err = json.Unmarshal(sk.SkinGeometry, &m); err != nil {
@@ -1353,19 +1341,11 @@ func debugShapeToProtocol(shape debug.Shape, dim world.Dimension, attachedEntity
 
 // gameTypeFromMode returns the game type ID from the game mode passed.
 func gameTypeFromMode(mode world.GameMode) int32 {
-	// Every game mode that moves through blocks is sent as spectator: the
-	// client only flies through blocks in the spectator game type.
-	if !mode.HasCollision() {
+	if mode == world.GameModeSpectator {
 		return packet.GameTypeSpectator
 	}
 	if mode.AllowsFlying() && mode.CreativeInventory() {
 		return packet.GameTypeCreative
-	}
-	// Game modes that can't break or place blocks are sent as adventure: in
-	// survival the client still cracks and breaks blocks on its own screen
-	// before the server puts them back.
-	if !mode.AllowsEditing() {
-		return packet.GameTypeAdventure
 	}
 	return packet.GameTypeSurvival
 }
